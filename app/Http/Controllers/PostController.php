@@ -3,55 +3,53 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Traits\ApiResponser;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class PostController extends Controller
 {
+    use ApiResponser;
     public function index()
     {
-        return Post::all();
+        $posts = Post::all();
+        return $this->successResponse($posts);
     }
 
     public function store(Request $request)
     {
-        try {
-            $post = new Post();
-            $post->title = $request->title;
-            $post->body = $request->body;
-
-            if ($post->save()) {
-                return response()->json(['status' => 'success', 'message' => 'Post created successfully']);
-            }
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
-        }
+        $rules = [
+            'title' => 'required|max:255',
+            'body' => 'required|max:255',
+        ];
+        $this->validate($request, $rules);
+        $post = Post::create($request->all());
+        $post->save();
+        return $this->successResponse($post, Response::HTTP_CREATED);
     }
 
     public function update(Request $request, $id)
     {
-        try {
-            $post = Post::findOrFail($id);
-            $post->title = $request->title;
-            $post->body = $request->body;
+        $rules = [
+            'title' => 'required|max:255',
+            'body' => 'required|max:255',
+        ];
+        $this->validate($request, $rules);
 
-            if ($post->save()) {
-                return response()->json(['status' => 'success', 'message' => 'Post updated successfully']);
-            }
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+        $post = Post::findOrFail($id);
+        $post->fill($request->all());
+        if ($post->isClean()) {
+            return $this->errorResponse('At least one Field should be changed', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+        $post->update($request->all());
+        // return $this->successResponse([$post, 'message' => 'Post updated successfully']);
+        return $this->successResponse($post);
     }
 
     public function destroy($id)
     {
-        try {
-            $post = Post::findOrFail($id);
-
-            if ($post->delete()) {
-                return response()->json(['status' => 'success', 'message' => 'Post deleted successfully']);
-            }
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
-        }
+        $post = Post::findOrFail($id);
+        $post->delete();
+        return $this->successResponse([$post, 'message' => 'Deleted Successfully']);
     }
 }

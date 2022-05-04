@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Traits\ApiResponser;
 use GuzzleHttp\Exception\BadResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class AuthController extends Controller
 {
+    use ApiResponser;
     public function login(Request $request)
     {
         $email = $request->username;
@@ -15,7 +18,7 @@ class AuthController extends Controller
 
         // Check if field is not empty
         if (empty($email) or empty($password)) {
-            return response()->json(['status' => 'error', 'message' => 'You must fill all fields']);
+            return $this->errorResponse('You must fill all fields', Response::HTTP_BAD_REQUEST);
         }
 
         $client = new \GuzzleHttp\Client();
@@ -69,21 +72,18 @@ class AuthController extends Controller
             $user->password = app('hash')->make($password);
 
             if ($user->save()) {
-                // Will call login method
-                // return $this->login($request);
                 return "Registered Successfully!!";
-
             }
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
-    public function logout(Request $request)
+    public function logout()
     {
 
         try {
-            auth()->user()->tokens()->each(function($token){
+            auth()->user()->tokens()->each(function ($token) {
                 $token->delete();
             });
             return response()->json(['status' => 'success', 'message' => 'Logged out successfully']);
